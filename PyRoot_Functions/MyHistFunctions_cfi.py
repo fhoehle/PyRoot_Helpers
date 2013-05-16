@@ -1,7 +1,9 @@
 import FWCore.ParameterSet.Config as cms
 import ROOT
 def SetErrorsNormHist(h1,integral_option):
- h1.Sumw2()
+ if h1.GetBinError(1) == 0:
+   print "no Bin Errors were given, poisson like will be created"
+   h1.GetSumw2().Set(0);h1.Sumw2()
  if h1.Integral(integral_option) > 0:
   h1.Scale(1.0/h1.Integral(integral_option))
  else:
@@ -162,4 +164,8 @@ def createRatio(pad,hdata,hmc,dontDraw = False):
 	#pad.GetFrame().Draw()
         pad.Update()
         return hratio
-
+#### printHist
+def printHistContent(hist):
+  print "Hist Contents: ",hist.GetName()
+  for i in range (hist.GetNbinsX()+2):
+    print "    bin ",i," content ",hist.GetBinContent(i)," error ",hist.GetBinError(i)," rel Error ",hist.GetBinError(i)/hist.GetBinContent(i) if hist.GetBinError(i) > 0 and hist.GetBinContent(i) != 0 else -99," binCenter ",hist.GetBinCenter(i)," low x edge ",hist.GetXaxis().GetBinLowEdge(i)," upper Edge ",hist.GetXaxis().GetBinUpEdge(i)
