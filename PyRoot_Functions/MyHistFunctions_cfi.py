@@ -24,6 +24,7 @@ class MyHistManager:
     self.outputFileName=outputFileName
     self.onlyOnePlotOutputFile=onlyOnePlotOutputFile
     self.hists=[]
+    self.additionalObjects = []
   def saveHist(self,hist,drawOption=""):
     hist.Sumw2()
     self.hists.append([hist,drawOption])
@@ -38,6 +39,9 @@ class MyHistManager:
 #      can_tmp.SaveAs(self.outputFileName+".ps" if self.onlyOnePlotOutputFile else can_tmp.GetName()+".pdf" )
     if self.onlyOnePlotOutputFile:
       can_dummy = ROOT.TCanvas("dummy"); can_dummy.SaveAs(self.outputFileName+".ps]")
+    outputFile.cd();
+    for addObj in self.additionalObjects:
+      addObj.Write()
     outputFile.Write();outputFile.Close()
     import os
     os.system("ps2pdf "+self.outputFileName+".ps "+self.outputFileName+".pdf")
