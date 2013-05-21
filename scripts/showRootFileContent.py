@@ -8,6 +8,7 @@ for opt,arg in opts:
 if filenames == None:
   sys.exit('provide a file')
 filenames = filenames.split(',')
+print filenames
 files = [ROOT.TFile(name) for name in filenames ]
 if len(files) == 1:
- file.ls()
+ files[0].ls()
