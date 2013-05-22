@@ -12,15 +12,16 @@ def SetMaximumNew(pad=ROOT.gPad):
  max=0
  first=None
  for pr in pad.GetListOfPrimitives():
-  if "TH1" in str(pr.__class__()):
+  if isinstance(pr,ROOT.TH1):
    if first == None:
     first=pr
    if max < pr.GetMaximum():
     max=pr.GetMaximum()
  if first != None:
-  first.SetMaximum(max*1.2)
-  first.SetMinimum(0.0)
- pad.Update()#Modified()
+  first.GetYaxis().SetRangeUser(0,max*1.2)
+ else:
+  print "nothing to do, no hists TH1 found"
+ pad.Update();pad.Modified()
 class MyHistManager:
   def __init__(self,outputFileName="tmp_output",onlyOnePlotOutputFile=False):
     self.outputFileName=outputFileName
