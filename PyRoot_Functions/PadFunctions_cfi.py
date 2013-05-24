@@ -43,8 +43,6 @@ def statboxesRightSide(pad=ROOT.gPad):
    histWidth = (1-pad.GetRightMargin()-pad.GetLeftMargin())*oldPadWidth
    noStatboxsPerColumn = int((padHeight*(1-pad.GetTopMargin() - pad.GetBottomMargin()))/statboxHeight)
    columnsStatBoxes = int(len(statboxs)/noStatboxsPerColumn +1)
-   #print "leftMarginWidth ",leftMarginWidth," statboxHeight ",statboxHeight," statboxWidth ",statboxWidth
-   #print "leftMarginWidth ",leftMarginWidth," histWidth ",histWidth,"  Ww ",pad.GetWw()
    pad.SetWindowSize(int(leftMarginWidth+histWidth+statboxWidth*columnsStatBoxes+rightMarginWidth),padHeight)
    newPadWidth = pad.GetWw()
    pad.SetRightMargin((rightMarginWidth+statboxWidth*columnsStatBoxes)/newPadWidth)
@@ -52,11 +50,8 @@ def statboxesRightSide(pad=ROOT.gPad):
    if columnsStatBoxes > 1 :
      print "too many histograms "
    for i,statbox in enumerate(statboxs):
-#     print "setting statbox ",statbox.GetName()," X1NDC ",statbox.GetX1NDC()," to ",leftMarginWidth+histWidth
-#     print "setting statbox ",statbox.GetName()," X2NDC ",statbox.GetX2NDC()," to ",leftMarginWidth+histWidth+statboxWidth
      statbox.SetX1NDC((leftMarginWidth+histWidth+int(i/noStatboxsPerColumn)*statboxWidth)/newPadWidth);statbox.SetX2NDC((leftMarginWidth+histWidth+(int(i/noStatboxsPerColumn)+1)*statboxWidth)/newPadWidth);
      statbox.SetY1NDC((padHeight-pad.GetTopMargin()*padHeight-(i+1-noStatboxsPerColumn*int(i/noStatboxsPerColumn))*statboxHeight)/padHeight);statbox.SetY2NDC((padHeight-pad.GetTopMargin()*padHeight-(i-noStatboxsPerColumn*int(i/noStatboxsPerColumn))*statboxHeight)/padHeight);
-#     print "setting statbox ",statbox.GetName()," Y1NDC ",statbox.GetY1NDC()," to ",pad.GetWh()-(i+1)*statboxHeight
    pad.Update()
    pad.Modified()
    pad.Update()
