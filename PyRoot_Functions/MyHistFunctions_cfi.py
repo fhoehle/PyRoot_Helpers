@@ -56,6 +56,36 @@ class RandomAccordingHist(object):
     return xRand
 ###
 colors=[1,2,3,4,5,6,7,8]
+class stackHists():
+  def __init__(self,hists):
+    self.hists = hists
+    self.hists.sort(key=lambda h: -1*h.Integral())
+    self.histsStacked = []
+  def addToStack(self,hist):
+    self.hists.append(hist)
+    self.hists.sort(key=lambda h: -1*h.Integral())
+  def createStack(self):
+    histStacked = self.hists[0].Clone(self.hists[0].GetName()+"_stacking");histStacked.SetFillColor(2)
+    self.histsStacked.append(histStacked)
+    stackName = histStacked.GetName()
+    for i,h in enumerate(self.hists[1:]):
+      histStacked = histStacked.Clone(stackName+"_"+str(i))
+      histStacked.Add(h)
+      histStacked.SetLineColor(h.GetLineColor())
+      self.histsStacked.append(histStacked)
+  def plotStack(self,nostack=False):
+     if nostack:
+       self.hists[0].Draw()
+       for h in self.hists[1:]:
+         h.Draw("same")
+     else:
+       self.histsStacked[-1].SetFillColor(self.histsStacked[-1].GetLineColor())
+       self.histsStacked[-1].Draw()
+       for h in reversed(self.histsStacked[:-1]):
+         h.SetFillColor(h.GetLineColor())
+         h.Draw("same")
+     ROOT.gPad.RedrawAxis()
+#    
 def norm1Hist1D(h,opts=""):
   h.Sumw2();h.Scale(1.0/h.Integral(opts))
 def loadSameHistFromFiles(histname, files ):
