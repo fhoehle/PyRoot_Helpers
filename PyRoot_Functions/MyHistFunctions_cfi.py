@@ -1,5 +1,5 @@
 import FWCore.ParameterSet.Config as cms
-import ROOT
+import ROOT,math
 def SetErrorsNormHist(h1,integral_option):
  if h1.GetBinError(1) == 0:
    print "no Bin Errors were given, poisson like will be created"
@@ -57,34 +57,78 @@ class RandomAccordingHist(object):
 ###
 colors=[1,2,3,4,5,6,7,8]
 class stackHists():
-  def __init__(self,hists):
+  def __init__(self,hists=None):
+    if hists is None:
+      hists = []
+    #print "init stack"
     self.hists = hists
     self.hists.sort(key=lambda h: -1*h.Integral())
     self.histsStacked = []
+    self.createdStack = False
+    self.leg = None
+    #print "init done ",len(self.hists)
   def addToStack(self,hist):
-    self.hists.append(hist)
+    if self.createdStack:
+      print "wont be added"
+      pass
+    if not isinstance(hist,list):
+      hist = [hist]
+    #print "befor adding"
+    for h in hist:
+      self.hists.append(h)
     self.hists.sort(key=lambda h: -1*h.Integral())
+    #print "adding done"
   def createStack(self):
+    #print "create stack"
+    #print self.hists
+    if self.createdStack:
+      pass
     histStacked = self.hists[0].Clone(self.hists[0].GetName()+"_stacking");histStacked.SetFillColor(2)
+    if hasattr(self.hists[0],"legLabel"):
+      setattr(histStacked,"legLabel",self.hists[0].legLabel)
     self.histsStacked.append(histStacked)
     stackName = histStacked.GetName()
     for i,h in enumerate(self.hists[1:]):
       histStacked = histStacked.Clone(stackName+"_"+str(i))
+      #print "nbins histStacked , h ",histStacked.GetNbinsX()," ",h.GetNbinsX()," ",h.GetName()
       histStacked.Add(h)
-      histStacked.SetLineColor(h.GetLineColor())
+      histStacked.SetLineColor(h.GetLineColor());
+      if hasattr(h,"legLabel"):
+        setattr(histStacked,"legLabel",h.legLabel)
       self.histsStacked.append(histStacked)
+    self.createdStack=True
+    #print "end created styack"
+  def getStackedHist(self):
+    #print "getting stack"
+    self.createStack()
+    #print "getting done"
+    return self.histsStacked[-1]
   def plotStack(self,nostack=False):
+     self.leg = ROOT.TLegend(0.7,0.6,0.89,0.89)
+     #print "plotting stack"
      if nostack:
-       self.hists[0].Draw()
+       self.hists[0].Draw("HIST")
+       self.leg.AddEntry(self.hists[0],self.hists[0].legLabel if hasattr(self.hists[0],"legLabel") else self.hists[0].GetName(),"l")
+       self.hists[0].SetStats(False)
        for h in self.hists[1:]:
-         h.Draw("same")
+         h.Draw("sameHIST")
+         self.leg.AddEntry(h,h.legLabel if hasattr(h,"legLabel") else h.GetName(),"l")
      else:
        self.histsStacked[-1].SetFillColor(self.histsStacked[-1].GetLineColor())
-       self.histsStacked[-1].Draw()
+       self.histsStacked[-1].Draw("HIST")
+       self.histsStacked[-1].SetStats(False)
+       print 
+       self.leg.AddEntry(self.histsStacked[-1],self.histsStacked[-1].legLabel if hasattr(self.histsStacked[-1],"legLabel") else self.histsStacked[-1].GetName(),"l")
        for h in reversed(self.histsStacked[:-1]):
          h.SetFillColor(h.GetLineColor())
-         h.Draw("same")
+         h.Draw("sameHIST")
+         if not hasattr(h,"legLabel"):
+           print "has no Lbel ",h.GetName()
+	 self.leg.AddEntry(h,h.legLabel if hasattr(h,"legLabel") else h.GetName(),"l")
+     self.leg.SetBorderSize(0)
+     self.leg.Draw()
      ROOT.gPad.RedrawAxis()
+     #print "plotting done"
 #    
 def norm1Hist1D(h,opts=""):
   h.Sumw2();h.Scale(1.0/h.Integral(opts))
@@ -187,7 +231,16 @@ def createRatio(pad,hdata,hmc,dontDraw = False):
         pad.Update()
         return hratio
 #### printHist
-def printHistContent(hist):
+def MyScaleSumw2(hist,fac):
+  relErrs = []
+  nBins = hist.GetNbinsX()+2
+  for i in range(nBins):
+    relErrs.append(hist.GetBinError(i)/math.fabs(hist.GetBinContent(i)) if hist.GetBinContent(i) != 0 else 0)
+  hist.Scale(fac)
+  for i in range(nBins):
+    hist.SetBinError(i,math.fabs(relErrs[i]*hist.GetBinContent(i)))
+
+def printHistContent(hist,no=-1):
   print "Hist Contents: ",hist.GetName()
-  for i in range (hist.GetNbinsX()+2):
+  for i in range(hist.GetNbinsX()+2) if no==-1 else [no]:
     print "    bin ",i," content ",hist.GetBinContent(i)," error ",hist.GetBinError(i)," rel Error ",hist.GetBinError(i)/hist.GetBinContent(i) if hist.GetBinError(i) > 0 and hist.GetBinContent(i) != 0 else -99," binCenter ",hist.GetBinCenter(i)," low x edge ",hist.GetXaxis().GetBinLowEdge(i)," upper Edge ",hist.GetXaxis().GetBinUpEdge(i)
