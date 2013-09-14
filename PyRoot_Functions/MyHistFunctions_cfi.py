@@ -8,6 +8,9 @@ def SetErrorsNormHist(h1,integral_option):
   h1.Scale(1.0/h1.Integral(integral_option))
  else:
   print "hist integral ",h1.Integral(integral_option)
+def addOverFlowToLastBin(h):
+  nBins = h.GetNbinsX()
+  h.SetBinContent(nBins,h.GetBinContent(nBins)+h.GetBinContent(nBins+1))
 ################
 class MyHistManager:
   def __init__(self,outputFileName="tmp_output",onlyOnePlotOutputFile=False):
@@ -17,15 +20,16 @@ class MyHistManager:
     self.additionalObjects = []
   def saveHist(self,hist,drawOption=""):
     hist.Sumw2()
-    self.hists.append([hist,drawOption])
+    setattr(hist,"myDrawOption",drawOption)
+    self.hists.append(hist)
   def done(self):
     outputFile = ROOT.TFile(self.outputFileName+".root","RECREATE")
     if self.onlyOnePlotOutputFile:
       can_dummy = ROOT.TCanvas("dummy"); can_dummy.SaveAs(self.outputFileName+".ps[")
-    for hist,opt in self.hists:
+    for hist in self.hists:
       outputFile.cd(); hist.Write()
       can_tmp = ROOT.TCanvas("can_"+hist.GetName(),hist.GetName(),0,0,700,500)
-      can_tmp.cd(); hist.Draw(opt)
+      can_tmp.cd(); hist.Draw(hist.myDrawOption)
 #      can_tmp.SaveAs(self.outputFileName+".ps" if self.onlyOnePlotOutputFile else can_tmp.GetName()+".pdf" )
     if self.onlyOnePlotOutputFile:
       can_dummy = ROOT.TCanvas("dummy"); can_dummy.SaveAs(self.outputFileName+".ps]")
@@ -73,17 +77,17 @@ class stackHists():
       histStacked.Add(h)
       histStacked.SetLineColor(h.GetLineColor())
       self.histsStacked.append(histStacked)
-  def plotStack(self,nostack=False):
+  def plotStack(self,nostack=False,drawOpt=""):
      if nostack:
-       self.hists[0].Draw()
+       self.hists[0].Draw(drawOpt)
        for h in self.hists[1:]:
-         h.Draw("same")
+         h.Draw("same"+drawOpt)
      else:
        self.histsStacked[-1].SetFillColor(self.histsStacked[-1].GetLineColor())
-       self.histsStacked[-1].Draw()
+       self.histsStacked[-1].Draw(drawOpt)
        for h in reversed(self.histsStacked[:-1]):
          h.SetFillColor(h.GetLineColor())
-         h.Draw("same")
+         h.Draw("same"+drawOpt)
      ROOT.gPad.RedrawAxis()
 #    
 def norm1Hist1D(h,opts=""):
