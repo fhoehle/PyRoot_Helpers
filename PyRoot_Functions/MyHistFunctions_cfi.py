@@ -61,34 +61,63 @@ class RandomAccordingHist(object):
 ###
 colors=[1,2,3,4,5,6,7,8]
 class stackHists():
-  def __init__(self,hists):
+  def __init__(self,hists,debug = False):
     self.hists = hists
     self.hists.sort(key=lambda h: -1*h.Integral())
     self.histsStacked = []
+    self.legend = None
+    self.debug = debug
   def addToStack(self,hist):
     self.hists.append(hist)
     self.hists.sort(key=lambda h: -1*h.Integral())
   def createStack(self):
     histStacked = self.hists[0].Clone(self.hists[0].GetName()+"_stacking");histStacked.SetFillColor(2)
+    if hasattr(self.hists[0],'copyIt'):
+      for att in self.hists[0].copyIt:
+        setattr(histStacked,att,getattr(self.hists[0],att))
     self.histsStacked.append(histStacked)
     stackName = histStacked.GetName()
     for i,h in enumerate(self.hists[1:]):
-      histStacked = histStacked.Clone(stackName+"_"+str(i))
-      histStacked.Add(h)
-      histStacked.SetLineColor(h.GetLineColor())
-      self.histsStacked.append(histStacked)
+      histnewStacked = self.histsStacked[-1].Clone(h.GetName()+"_stack_"+str(i))
+      if hasattr(h,'copyIt'):
+        for att in h.copyIt:
+          setattr(histnewStacked,att,getattr(h,att))
+      histnewStacked.Add(h)
+      histnewStacked.SetLineColor(h.GetLineColor())
+      self.histsStacked.append(histnewStacked)
+    for h in self.histsStacked:
+      print "testStack ", h.GetBinContent(1)
   def plotStack(self,nostack=False,drawOpt=""):
-     if nostack:
-       self.hists[0].Draw(drawOpt)
-       for h in self.hists[1:]:
-         h.Draw("same"+drawOpt)
-     else:
-       self.histsStacked[-1].SetFillColor(self.histsStacked[-1].GetLineColor())
-       self.histsStacked[-1].Draw(drawOpt)
-       for h in reversed(self.histsStacked[:-1]):
+     self.legend = ROOT.TLegend(0.7,0.7,0.9,0.9)
+     for i,h in enumerate(self.hists if nostack else reversed(self.histsStacked)):
+       if not nostack:
          h.SetFillColor(h.GetLineColor())
-         h.Draw("same"+drawOpt)
+       print "h ",h.GetName()," ",drawOpt," ",h.GetLineColor()," ",h.GetFillColor()," ",h.Integral()
+       h.Draw(("same" if i != 0 else "")+drawOpt)
+       self.legend.AddEntry(h,h.label if hasattr(h,'label') else h.GetName(),"f")
      ROOT.gPad.RedrawAxis()
+  def drawLegend(self,can=ROOT.gPad):
+    can.cd()
+    self.legend.Draw()
+    can.Update()
+    max=getMaxAllHists(can)  
+    min=getMinAllHists(can)
+    firstHist = getFirstHist(can)
+    if self.debug:
+      print "max ",max," min ",min
+      print "availSpace for Axis",1 - can.GetTopMargin() - can.GetBottomMargin()
+      print "height Leg ",( self.legend.GetY2NDC()-self.legend.GetY1NDC())
+      print "legend properties ",self.legend.GetY2NDC()," ",self.legend.GetY1NDC() 
+      print "total ",(1 - can.GetTopMargin() - can.GetBottomMargin() - (self.legend.GetY2NDC()-self.legend.GetY1NDC()))
+    newMax = min + float(max-min)/float(1 - can.GetTopMargin() - can.GetBottomMargin() - (self.legend.GetY2NDC()-self.legend.GetY1NDC()))
+    if self.debug:
+      print newMax
+      print float(max-min)
+      print float(max-min)/(1 - can.GetTopMargin() - can.GetBottomMargin() - (self.legend.GetY2NDC()-self.legend.GetY1NDC()))
+    firstHist.SetMaximum(newMax)
+    if self.debug:
+      print "max ",max," min ",min," firstHist ",firstHist.GetName()," max ",firstHist.GetMaximum()
+    can.Update();can.Modified();can.Update()
 #    
 def norm1Hist1D(h,opts=""):
   h.Sumw2();h.Scale(1.0/h.Integral(opts))
@@ -99,6 +128,26 @@ def loadSameHistFromFiles(histname, files ):
     setattr(hist,'fromFile',file.GetName())
     hists.append(hist)
   return hists 
+###################
+def getMaxAllHists(can=ROOT.gPad):
+  max = None
+  for pr in can.GetListOfPrimitives():
+    if isinstance(pr,ROOT.TH1):
+      if not max or pr.GetMaximum() > max:
+        max = pr.GetMaximum()
+  return max
+###################
+def getMinAllHists(can=ROOT.gPad):
+  min = None
+  for pr in can.GetListOfPrimitives():
+    if isinstance(pr,ROOT.TH1):
+      if not min or pr.GetMinimum() < min:
+        min = pr.GetMinimum()
+  return min
+def getFirstHist(can = ROOT.gPad):
+  for pr in can.GetListOfPrimitives():
+    if isinstance(pr,ROOT.TH1):
+      return pr
 def plotHists(hists):
   can = ROOT.TCanvas("can_"+hists[0].GetName(),"",200,10,700,500)
   can.cd()
