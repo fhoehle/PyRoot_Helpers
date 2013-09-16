@@ -88,7 +88,7 @@ class stackHists():
     for h in self.histsStacked:
       print "testStack ", h.GetBinContent(1)
   def plotStack(self,nostack=False,drawOpt=""):
-     self.legend = ROOT.TLegend(0.7,0.7,0.9,0.9)
+     self.legend = ROOT.TLegend(0.68,0.68,0.88,0.88)
      for i,h in enumerate(self.hists if nostack else reversed(self.histsStacked)):
        if not nostack:
          h.SetFillColor(h.GetLineColor())
@@ -98,7 +98,7 @@ class stackHists():
      ROOT.gPad.RedrawAxis()
   def drawLegend(self,can=ROOT.gPad):
     can.cd()
-    self.legend.Draw()
+    self.legend.Draw();self.legend.SetBorderSize(0)
     can.Update()
     max=getMaxAllHists(can)  
     min=getMinAllHists(can)
@@ -106,10 +106,8 @@ class stackHists():
     if self.debug:
       print "max ",max," min ",min
       print "availSpace for Axis",1 - can.GetTopMargin() - can.GetBottomMargin()
-      print "height Leg ",( self.legend.GetY2NDC()-self.legend.GetY1NDC())
-      print "legend properties ",self.legend.GetY2NDC()," ",self.legend.GetY1NDC() 
-      print "total ",(1 - can.GetTopMargin() - can.GetBottomMargin() - (self.legend.GetY2NDC()-self.legend.GetY1NDC()))
-    newMax = min + float(max-min)/float(1 - can.GetTopMargin() - can.GetBottomMargin() - (self.legend.GetY2NDC()-self.legend.GetY1NDC()))
+      print "height Leg ",( self.legend.GetY2NDC()-self.legend.GetY1NDC())," Y2 ",self.legend.GetY2NDC() ," Y1 ",self.legend.GetY1NDC()
+    newMax = min + float(max-min)/float(1 - can.GetTopMargin() - can.GetBottomMargin() - ((1-can.GetTopMargin())-self.legend.GetY1NDC()))
     if self.debug:
       print newMax
       print float(max-min)
