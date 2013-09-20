@@ -60,12 +60,47 @@ class RandomAccordingHist(object):
     return xRand
 ###
 colors=[1,2,3,4,5,6,7,8]
+def getHistsOfPad (canvas = ROOT.gPad):
+  return [ pr for pr in canvas.GetListOfPrimitives() if isinstance(pr,ROOT.TH1)]
+class myLegend(object):
+  def __init__(self,canvas=ROOT.gPad,legendHeight=0.2,legendWidth=0.2,debug=False):
+    self.canvas = canvas
+    self.legendHeight = legendHeight
+    self.legendWidth = legendWidth
+    self.debug = debug
+  def createLegend(self):
+    smallSpace = 0.05
+    self.legend = ROOT.TLegend(1 - self.canvas.GetRightMargin() - smallSpace - self.legendWidth,1 -  self.canvas.GetTopMargin() - smallSpace - self.legendHeight,1 - self.canvas.GetRightMargin() - smallSpace,1 - self.canvas.GetTopMargin() - smallSpace)
+    hists = getHistsOfPad(self.canvas)
+    for i,hist in enumerate(hists):
+      if  i == len(hists)-1 and hists[0].GetName() == hists[-1].GetName():
+        if self.debug:
+          print "found hist created by redrawing axis"
+        continue
+      self.legend.AddEntry(hist,hist.label if hasattr(hist,'label') else hist.GetName(),"f")
+      if self.debug:
+        print "added to legend ",hist.GetName()
+        print "has label ",hasattr(hist,'label')
+  def drawLegend(self):
+    self.canvas.cd()
+    self.legend.Draw();self.legend.SetBorderSize(0)
+    self.canvas.Update()
+    max=getMaxAllHists(self.canvas)  
+    min=getMinAllHists(self.canvas)
+    firstHist = getFirstHist(self.canvas)
+    if self.debug:
+      print "max ",max," min ",min
+    newMax = min + float(max-min)/float(1 - self.canvas.GetTopMargin() - self.canvas.GetBottomMargin() - ((1-self.canvas.GetTopMargin())-self.legend.GetY1NDC()))
+    if self.debug:
+      print newMax
+    firstHist.SetMaximum(newMax)
+    self.canvas.Update();self.canvas.Modified();self.canvas.Update()
+#    
 class stackHists():
   def __init__(self,hists,debug = False):
     self.hists = hists
     self.hists.sort(key=lambda h: -1*h.Integral())
     self.histsStacked = []
-    self.legend = None
     self.debug = debug
   def addToStack(self,hist):
     self.hists.append(hist)
@@ -88,35 +123,16 @@ class stackHists():
     for h in self.histsStacked:
       print "testStack ", h.GetBinContent(1)
   def plotStack(self,nostack=False,drawOpt=""):
-     self.legend = ROOT.TLegend(0.68,0.68,0.88,0.88)
      for i,h in enumerate(self.hists if nostack else reversed(self.histsStacked)):
+       print "plotting ",i," ",len(getHistsOfPad()) 
        if not nostack:
          h.SetFillColor(h.GetLineColor())
        print "h ",h.GetName()," ",drawOpt," ",h.GetLineColor()," ",h.GetFillColor()," ",h.Integral()
        h.Draw(("same" if i != 0 else "")+drawOpt)
-       self.legend.AddEntry(h,h.label if hasattr(h,'label') else h.GetName(),"f")
+       print "plotting done ",i," ",len(getHistsOfPad())
      ROOT.gPad.RedrawAxis()
-  def drawLegend(self,can=ROOT.gPad):
-    can.cd()
-    self.legend.Draw();self.legend.SetBorderSize(0)
-    can.Update()
-    max=getMaxAllHists(can)  
-    min=getMinAllHists(can)
-    firstHist = getFirstHist(can)
-    if self.debug:
-      print "max ",max," min ",min
-      print "availSpace for Axis",1 - can.GetTopMargin() - can.GetBottomMargin()
-      print "height Leg ",( self.legend.GetY2NDC()-self.legend.GetY1NDC())," Y2 ",self.legend.GetY2NDC() ," Y1 ",self.legend.GetY1NDC()
-    newMax = min + float(max-min)/float(1 - can.GetTopMargin() - can.GetBottomMargin() - ((1-can.GetTopMargin())-self.legend.GetY1NDC()))
-    if self.debug:
-      print newMax
-      print float(max-min)
-      print float(max-min)/(1 - can.GetTopMargin() - can.GetBottomMargin() - (self.legend.GetY2NDC()-self.legend.GetY1NDC()))
-    firstHist.SetMaximum(newMax)
-    if self.debug:
-      print "max ",max," min ",min," firstHist ",firstHist.GetName()," max ",firstHist.GetMaximum()
-    can.Update();can.Modified();can.Update()
-#    
+     print "finished plotting " ,len(getHistsOfPad())
+#
 def norm1Hist1D(h,opts=""):
   h.Sumw2();h.Scale(1.0/h.Integral(opts))
 def loadSameHistFromFiles(histname, files ):
