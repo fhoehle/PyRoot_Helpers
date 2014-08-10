@@ -93,8 +93,8 @@ class myLegend(object):
     min=getMinAllHists(self.canvas)
     firstHist = getFirstHist(self.canvas)
     if self.debug:
-      print "max ",max," min ",min," topMargin ",self.canvas.GetTopMargin()," BottomMargin ", self.canvas.GetBottomMargin()," GetY1NDC ",self.legend.GetY1()
-    newMax = min + float(max-min)/float(1 - self.canvas.GetTopMargin() - self.canvas.GetBottomMargin() - ((1-self.canvas.GetTopMargin())-self.legend.GetY1()))
+      print "max ",max," min ",min," topMargin ",self.canvas.GetTopMargin()," BottomMargin ", self.canvas.GetBottomMargin()," GetY1 ",self.legend.GetY1()," GetY1NDC ",self.legend.GetY1NDC()
+    newMax = min + float(max-min)/float(1 - self.canvas.GetTopMargin() - self.canvas.GetBottomMargin() - ((1-self.canvas.GetTopMargin())-self.legend.GetY1NDC()))
     if self.debug:
       print "newMax ",newMax
     firstHist.SetMaximum(newMax)

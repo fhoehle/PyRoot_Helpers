@@ -1,5 +1,6 @@
 import ROOT 
 def NormalStyle():
+  ROOT.gROOT.SetStyle('Plain')
   ROOT.gStyle.SetFillColor(0);  #white fill color
   ROOT.gStyle.SetFrameBorderMode(0);  #no frame border
   ROOT.gStyle.SetCanvasBorderMode(0);  #no canvas border
