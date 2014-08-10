@@ -71,6 +71,10 @@ class myLegend(object):
   def createLegend(self):
     smallSpace = 0.05
     self.legend = ROOT.TLegend(1 - self.canvas.GetRightMargin() - smallSpace - self.legendWidth,1 -  self.canvas.GetTopMargin() - smallSpace - self.legendHeight,1 - self.canvas.GetRightMargin() - smallSpace,1 - self.canvas.GetTopMargin() - smallSpace)
+    self.legend.Draw() 
+    if self.debug:
+      print 1 - self.canvas.GetRightMargin() - smallSpace - self.legendWidth , " ", 1 -  self.canvas.GetTopMargin() - smallSpace - self.legendHeight ," ", 1 - self.canvas.GetRightMargin() - smallSpace ," ", 1 - self.canvas.GetTopMargin() - smallSpace
+      print " GetY1NDC ",self.legend.GetY1NDC()," GetY2NDC ",self.legend.GetY2NDC()," GetX1NDC ",self.legend.GetX1NDC()," GetX2NDC ",self.legend.GetX2NDC()
     hists = getHistsOfPad(self.canvas)
     for i,hist in enumerate(hists):
       if  i == len(hists)-1 and hists[0].GetName() == hists[-1].GetName():
@@ -89,10 +93,10 @@ class myLegend(object):
     min=getMinAllHists(self.canvas)
     firstHist = getFirstHist(self.canvas)
     if self.debug:
-      print "max ",max," min ",min
-    newMax = min + float(max-min)/float(1 - self.canvas.GetTopMargin() - self.canvas.GetBottomMargin() - ((1-self.canvas.GetTopMargin())-self.legend.GetY1NDC()))
+      print "max ",max," min ",min," topMargin ",self.canvas.GetTopMargin()," BottomMargin ", self.canvas.GetBottomMargin()," GetY1NDC ",self.legend.GetY1()
+    newMax = min + float(max-min)/float(1 - self.canvas.GetTopMargin() - self.canvas.GetBottomMargin() - ((1-self.canvas.GetTopMargin())-self.legend.GetY1()))
     if self.debug:
-      print newMax
+      print "newMax ",newMax
     firstHist.SetMaximum(newMax)
     self.canvas.Update();self.canvas.Modified();self.canvas.Update()
 #    
@@ -253,6 +257,12 @@ def createRatio(pad,hdata,hmc,dontDraw = False):
 	#pad.GetFrame().Draw()
         pad.Update()
         return hratio
+##
+def deleteAllStatboxes(pad=ROOT.gPad):
+  pad.Update();pad.Modified();pad.Update()
+  for h in getHistsOfPad(pad):
+    h.SetStats(0); # can be activated by SetStats(1)
+  pad.Update();pad.Modified();pad.Update()
 #### printHist
 def printHistContent(hist):
   print "Hist Contents: ",hist.GetName()
