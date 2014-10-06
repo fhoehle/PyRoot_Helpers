@@ -1,5 +1,5 @@
 import FWCore.ParameterSet.Config as cms
-import ROOT
+import ROOT,copy
 def SetErrorsNormHist(h1,integral_option):
  if h1.GetBinError(1) == 0:
    print "no Bin Errors were given, poisson like will be created"
@@ -11,6 +11,11 @@ def SetErrorsNormHist(h1,integral_option):
 def addOverFlowToLastBin(h):
   nBins = h.GetNbinsX()
   h.SetBinContent(nBins,h.GetBinContent(nBins)+h.GetBinContent(nBins+1))
+class myTH1DCreator(object):
+  def __init__(self, commonPostfix):
+    self.commonPostfix=commonPostfix
+  def create(self,label,nBins,xMin,xMax):
+    return ROOT.TH1D(label,label+"_"+self.commonPostfix,nBins,xMin,xMax).Clone()
 ################
 class MyHistManager:
   def __init__(self,outputFileName="tmp_output",onlyOnePlotOutputFile=False):
@@ -71,17 +76,23 @@ class myLegend(object):
   def createLegend(self):
     smallSpace = 0.05
     self.legend = ROOT.TLegend(1 - self.canvas.GetRightMargin() - smallSpace - self.legendWidth,1 -  self.canvas.GetTopMargin() - smallSpace - self.legendHeight,1 - self.canvas.GetRightMargin() - smallSpace,1 - self.canvas.GetTopMargin() - smallSpace)
-    self.legend.Draw() 
+    self.legend.SetTextSize(0.03)
+    #self.legend.Draw() 
     if self.debug:
       print 1 - self.canvas.GetRightMargin() - smallSpace - self.legendWidth , " ", 1 -  self.canvas.GetTopMargin() - smallSpace - self.legendHeight ," ", 1 - self.canvas.GetRightMargin() - smallSpace ," ", 1 - self.canvas.GetTopMargin() - smallSpace
       print " GetY1NDC ",self.legend.GetY1NDC()," GetY2NDC ",self.legend.GetY2NDC()," GetX1NDC ",self.legend.GetX1NDC()," GetX2NDC ",self.legend.GetX2NDC()
-    hists = getHistsOfPad(self.canvas)
-    for i,hist in enumerate(hists):
-      if  i == len(hists)-1 and hists[0].GetName() == hists[-1].GetName():
-        if self.debug:
-          print "found hist created by redrawing axis"
+    self.hists = getHistsOfPad(self.canvas)
+    histnames = [] # because of stupid redrawing axis
+    for i,hist in enumerate(self.hists):
+      if hist.GetName() in histnames:
         continue
-      self.legend.AddEntry(hist,hist.label if hasattr(hist,'label') else hist.GetName(),"f")
+      histnames.append(hist.GetName())
+      if  i == len(self.hists)-1 and self.hists[0].GetName() == self.hists[-1].GetName():
+        if self.debug:
+          print "found hist created by redrawing axis, skipping, skipping ..."
+        continue
+      
+      self.legend.AddEntry(hist,hist.label if hasattr(hist,'label') else hist.GetName(), (hist.legDrawOpt if hasattr(hist,'legDrawOpt') else "f") )
       if self.debug:
         print "added to legend ",hist.GetName()
         print "has label ",hasattr(hist,'label')
@@ -103,39 +114,56 @@ class myLegend(object):
 class stackHists():
   def __init__(self,hists,debug = False):
     self.hists = hists
-    self.hists.sort(key=lambda h: -1*h.Integral())
+    self.hists.sort(key=lambda h: h.Integral())
     self.histsStacked = []
     self.debug = debug
+    if self.debug:
+      print "testing colors"
+      for h in self.hists:
+       print h.GetName()," ",h.GetLineColor(),
+       print " dict ",h.__dict__ 
+  def revertHistOrder(self):
+    self.hists.sort(key=lambda h: -1.0*h.Integral())
   def addToStack(self,hist):
     self.hists.append(hist)
-    self.hists.sort(key=lambda h: -1*h.Integral())
+    self.hists.sort(key=lambda h: h.Integral())
   def createStack(self):
-    histStacked = self.hists[0].Clone(self.hists[0].GetName()+"_stacking");histStacked.SetFillColor(2)
-    if hasattr(self.hists[0],'copyIt'):
-      for att in self.hists[0].copyIt:
-        setattr(histStacked,att,getattr(self.hists[0],att))
+    histStacked = self.hists[0].Clone(self.hists[0].GetName()+"_stacking");#histStacked.SetFillColor(2)
+    histStacked.__dict__.update( self.hists[0].__dict__)
+    #if hasattr(self.hists[0],'copyIt'):
+    #  for att in self.hists[0].copyIt:
+    #    setattr(histStacked,att,getattr(self.hists[0],att))
     self.histsStacked.append(histStacked)
     stackName = histStacked.GetName()
     for i,h in enumerate(self.hists[1:]):
       histnewStacked = self.histsStacked[-1].Clone(h.GetName()+"_stack_"+str(i))
-      if hasattr(h,'copyIt'):
-        for att in h.copyIt:
-          setattr(histnewStacked,att,getattr(h,att))
+      histnewStacked.__dict__.update(h.__dict__)
+      #if hasattr(h,'copyIt'):
+      #  for att in h.copyIt:
+      #    setattr(histnewStacked,att,getattr(h,att))
       histnewStacked.Add(h)
+      if self.debug:
+        print h.GetName()," h.GetLineColor() ",h.GetLineColor()
       histnewStacked.SetLineColor(h.GetLineColor())
       self.histsStacked.append(histnewStacked)
-    for h in self.histsStacked:
-      print "testStack ", h.GetBinContent(1)
-  def plotStack(self,nostack=False,drawOpt=""):
+    if self.debug:
+      for h in self.histsStacked:
+        print "testStack ", h.GetBinContent(1)
+  def plotStack(self,nostack=False,drawOpt="",same=False):
      for i,h in enumerate(self.hists if nostack else reversed(self.histsStacked)):
-       print "plotting ",i," ",len(getHistsOfPad()) 
+       if self.debug:
+         print "plotting ",i," ",len(getHistsOfPad()) 
        if not nostack:
          h.SetFillColor(h.GetLineColor())
-       print "h ",h.GetName()," ",drawOpt," ",h.GetLineColor()," ",h.GetFillColor()," ",h.Integral()
-       h.Draw(("same" if i != 0 else "")+drawOpt)
-       print "plotting done ",i," ",len(getHistsOfPad())
+       locDrawOpt = ("same" if i != 0 or same else "")+drawOpt
+       if self.debug:
+         print "h ",h.GetName()," drawOpt ",locDrawOpt," lineColor ",h.GetLineColor()," fillColor ",h.GetFillColor()," int ",h.Integral()
+       h.Draw(locDrawOpt)
+       if self.debug:
+         print "plotting done ",i," ",len(getHistsOfPad())
      ROOT.gPad.RedrawAxis()
-     print "finished plotting " ,len(getHistsOfPad())
+     if self.debug:
+       print "finished plotting " ,len(getHistsOfPad())
 #
 def norm1Hist1D(h,opts=""):
   h.Sumw2();h.Scale(1.0/h.Integral(opts))
